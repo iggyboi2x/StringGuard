@@ -9,9 +9,9 @@ function Home() {
     const clean = slug
       .trim()
       .toLowerCase()
-      .replace(/[^a-z0-9-_]/g, "-")  // only allow safe characters
-      .replace(/-+/g, "-")            // collapse multiple dashes
-      .slice(0, 64);                  // max 64 characters
+      .replace(/[^a-z0-9-_]/g, "-") // only allow safe characters
+      .replace(/-+/g, "-") // collapse multiple dashes
+      .slice(0, 64); // max 64 characters
     if (!clean) return;
     navigate(`/page/${clean}`);
   };
@@ -24,7 +24,11 @@ function Home() {
     <div className="home-wrap fade-up">
       <div className="home-card">
         <p className="home-eyebrow">// secure notepad</p>
-        <h1 className="home-title">Your private<br />space to write.</h1>
+        <h1 className="home-title">
+          Your private
+          <br />
+          space to write.
+        </h1>
         <p className="home-subtitle">
           Enter a page name to create or access a password-protected note.
           Nobody else can read it without your key.

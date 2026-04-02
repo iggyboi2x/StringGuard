@@ -1,4 +1,10 @@
-import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import Home from "./pages/Home";
 import Page from "./pages/Page";
 
@@ -14,7 +20,11 @@ function Header() {
       <span className="app-logo" onClick={() => navigate("/")} title="Go home">
         String<span>Guard</span>
       </span>
-      {slug && <span className="app-slug">/ <strong>{slug}</strong></span>}
+      {slug && (
+        <span className="app-slug">
+          / <strong>{slug}</strong>
+        </span>
+      )}
     </header>
   );
 }

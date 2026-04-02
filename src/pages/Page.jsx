@@ -34,11 +34,16 @@ function Page() {
       .from("pages")
       .select("id, slug, password, tabs, updated_at")
       .eq("slug", slug)
-      .single();
+      .maybeSingle();
 
-    if (error && error.code === "PGRST116") {
+    if (error) {
+      console.error("Supabase error:", error);
+      // Treat any fetch error as a new page so the user can still proceed
       setIsNew(true);
-    } else if (data) {
+    } else if (!data) {
+      // No row found — this is a new page
+      setIsNew(true);
+    } else {
       setPage(data);
       const loadedTabs =
         data.tabs && data.tabs.length > 0
@@ -46,8 +51,6 @@ function Page() {
           : [{ id: generateId(), label: "Tab 1", content: "" }];
       setTabs(loadedTabs);
       setActiveTabId(loadedTabs[0].id);
-    } else {
-      console.error(error);
     }
     setLoading(false);
   }
