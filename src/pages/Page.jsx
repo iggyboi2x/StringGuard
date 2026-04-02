@@ -259,6 +259,7 @@ function Page() {
             <button className="tab-add" onClick={addTab} title="New tab">
               +
             </button>
+            <span className="tab-hint">double-click to rename</span>
           </div>
 
           <div className="editor-area">

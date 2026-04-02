@@ -317,6 +317,9 @@ textarea {
   border-right: 1px solid var(--border);
   border-bottom: 2px solid transparent;
   white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition:
     color 0.15s,
     background 0.15s;
@@ -379,6 +382,16 @@ textarea {
 
 .tab-add:hover {
   color: var(--accent);
+}
+
+.tab-hint {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding: 0 12px;
+  white-space: nowrap;
+  align-self: center;
+  opacity: 0.5;
 }
 
 .tab-rename-input {
