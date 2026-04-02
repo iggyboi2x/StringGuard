@@ -23,6 +23,8 @@ function Page() {
 
   const [tabs, setTabs] = useState([]);
   const [activeTabId, setActiveTabId] = useState(null);
+  const [renamingTabId, setRenamingTabId] = useState(null);
+  const [renameValue, setRenameValue] = useState("");
   const saveFlashTimer = useRef(null);
 
   useEffect(() => {
@@ -112,6 +114,22 @@ function Page() {
     const remaining = tabs.filter((t) => t.id !== id);
     setTabs(remaining);
     if (activeTabId === id) setActiveTabId(remaining[remaining.length - 1].id);
+  }
+
+  function startRename(tab, e) {
+    e.stopPropagation();
+    setRenamingTabId(tab.id);
+    setRenameValue(tab.label);
+  }
+
+  function commitRename(id) {
+    const trimmed = renameValue.trim();
+    if (trimmed) {
+      setTabs((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, label: trimmed } : t))
+      );
+    }
+    setRenamingTabId(null);
   }
 
   function updateContent(value) {
@@ -207,8 +225,25 @@ function Page() {
                 key={tab.id}
                 className={`tab-item ${tab.id === activeTabId ? "active" : ""}`}
                 onClick={() => setActiveTabId(tab.id)}
+                onDoubleClick={(e) => startRename(tab, e)}
               >
-                {tab.label}
+                {renamingTabId === tab.id ? (
+                  <input
+                    className="tab-rename-input"
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onBlur={() => commitRename(tab.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") commitRename(tab.id);
+                      if (e.key === "Escape") setRenamingTabId(null);
+                      e.stopPropagation();
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    autoFocus
+                  />
+                ) : (
+                  tab.label
+                )}
                 <span
                   className="tab-close"
                   onClick={(e) => {

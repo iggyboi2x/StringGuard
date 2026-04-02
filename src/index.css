@@ -381,6 +381,19 @@ textarea {
   color: var(--accent);
 }
 
+.tab-rename-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--accent);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  outline: none;
+  width: 80px;
+  padding: 0 2px;
+}
+
 /* Editor area */
 .editor-area {
   flex: 1;
