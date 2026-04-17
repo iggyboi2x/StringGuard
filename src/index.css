@@ -286,6 +286,7 @@ textarea {
   flex-direction: column;
   flex: 1;
   overflow: hidden;
+  min-height: 0;
 }
 
 /* Tab bar */
@@ -415,58 +416,70 @@ textarea {
   overflow: hidden;
   padding: 20px 24px;
   gap: 16px;
+  min-height: 0;
 }
 
 /* ── CodeMirror wrapper ── */
 .cm-wrapper {
   flex: 1;
+  min-height: 0;
   overflow: hidden;
   border-radius: 6px;
   border: 1px solid var(--border);
   transition: border-color 0.15s;
-  display: flex;
-  flex-direction: column;
+  position: relative; /* Context for absolute scroller */
+  background: #141414;
 }
 
 .cm-wrapper:focus-within {
   border-color: var(--border-active);
 }
 
+/* Force CodeMirror to fill the wrapper and scroll internally */
 .cm-wrapper .cm-editor {
-  height: 100%;
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 100% !important;
   font-size: 14px;
-  line-height: 1.7;
   letter-spacing: 0.02em;
+  outline: none !important;
 }
 
 .cm-wrapper .cm-scroller {
   font-family: var(--font-mono) !important;
-  overflow: auto;
+  overflow: auto !important;
+  height: 100%;
+  scrollbar-gutter: stable;
 }
 
-.cm-wrapper .cm-content {
-  padding: 16px 0;
-}
-
-.cm-wrapper .cm-line {
-  padding: 0 20px;
-}
-
-.cm-wrapper .cm-gutters {
-  padding: 16px 0;
-  user-select: none;
-}
-
-.cm-wrapper .cm-gutter {
-  min-width: 40px;
-}
-
+/* Strip all internal padding/margin to ensure perfect alignment base */
+.cm-wrapper .cm-content,
+.cm-wrapper .cm-gutters,
+.cm-wrapper .cm-gutter,
 .cm-wrapper .cm-gutterElement {
-  padding: 0 8px 0 12px;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+}
+
+/* Unified vertical rhythm */
+.cm-wrapper .cm-line,
+.cm-wrapper .cm-gutterElement {
+  line-height: inherit;
+  min-height: 0;
+}
+
+.cm-wrapper .cm-activeLine,
+.cm-wrapper .cm-activeLineGutter {
+  background: rgba(255, 255, 255, 0.03) !important;
 }
 
 .cm-wrapper .cm-placeholder {
   color: #555;
+  font-style: italic;
 }
 
 .cm-wrapper .cm-cursor {

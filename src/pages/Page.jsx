@@ -35,71 +35,104 @@ const sgTheme = createTheme({
     fontFamily: '"IBM Plex Mono", monospace',
   },
   styles: [
-    { tag: t.comment,           color: "#555", fontStyle: "italic" },
-    { tag: t.lineComment,       color: "#555", fontStyle: "italic" },
-    { tag: t.blockComment,      color: "#555", fontStyle: "italic" },
-    { tag: t.docComment,        color: "#555", fontStyle: "italic" },
-    { tag: t.keyword,           color: "#c8f562", fontWeight: "500" },
-    { tag: t.controlKeyword,    color: "#c8f562" },
-    { tag: t.moduleKeyword,     color: "#c8f562" },
+    { tag: t.comment, color: "#555", fontStyle: "italic" },
+    { tag: t.lineComment, color: "#555", fontStyle: "italic" },
+    { tag: t.blockComment, color: "#555", fontStyle: "italic" },
+    { tag: t.docComment, color: "#555", fontStyle: "italic" },
+    { tag: t.keyword, color: "#c8f562", fontWeight: "500" },
+    { tag: t.controlKeyword, color: "#c8f562" },
+    { tag: t.moduleKeyword, color: "#c8f562" },
     { tag: t.definitionKeyword, color: "#c8f562" },
-    { tag: t.operatorKeyword,   color: "#c8f562" },
+    { tag: t.operatorKeyword, color: "#c8f562" },
     { tag: [t.string, t.special(t.brace)], color: "#f5b662" },
-    { tag: t.character,         color: "#f5b662" },
-    { tag: t.number,            color: "#79c0ff" },
-    { tag: t.integer,           color: "#79c0ff" },
-    { tag: t.float,             color: "#79c0ff" },
-    { tag: t.bool,              color: "#c8f562" },
-    { tag: t.null,              color: "#c8f562" },
-    { tag: t.atom,              color: "#c8f562" },
-    { tag: t.self,              color: "#ff7b72" },
-    { tag: t.operator,          color: "#e8e8e8" },
-    { tag: t.variableName,      color: "#e8e8e8" },
+    { tag: t.character, color: "#f5b662" },
+    { tag: t.number, color: "#79c0ff" },
+    { tag: t.integer, color: "#79c0ff" },
+    { tag: t.float, color: "#79c0ff" },
+    { tag: t.bool, color: "#c8f562" },
+    { tag: t.null, color: "#c8f562" },
+    { tag: t.atom, color: "#c8f562" },
+    { tag: t.self, color: "#ff7b72" },
+    { tag: t.operator, color: "#e8e8e8" },
+    { tag: t.variableName, color: "#e8e8e8" },
     { tag: t.definition(t.variableName), color: "#d2a8ff" },
-    { tag: t.function(t.variableName),   color: "#d2a8ff" },
-    { tag: t.function(t.propertyName),   color: "#d2a8ff" },
-    { tag: [t.typeName, t.namespace],    color: "#ffa657" },
-    { tag: t.className,         color: "#ffa657" },
-    { tag: t.annotation,        color: "#ffa657" },
-    { tag: t.propertyName,      color: "#79c0ff" },
-    { tag: t.punctuation,       color: "#888" },
-    { tag: t.separator,         color: "#888" },
-    { tag: t.bracket,           color: "#888" },
-    { tag: t.tagName,           color: "#7ee787" },
-    { tag: t.attributeName,     color: "#79c0ff" },
-    { tag: t.attributeValue,    color: "#f5b662" },
-    { tag: t.angleBracket,      color: "#888" },
+    { tag: t.function(t.variableName), color: "#d2a8ff" },
+    { tag: t.function(t.propertyName), color: "#d2a8ff" },
+    { tag: [t.typeName, t.namespace], color: "#ffa657" },
+    { tag: t.className, color: "#ffa657" },
+    { tag: t.annotation, color: "#ffa657" },
+    { tag: t.propertyName, color: "#79c0ff" },
+    { tag: t.punctuation, color: "#888" },
+    { tag: t.separator, color: "#888" },
+    { tag: t.bracket, color: "#888" },
+    { tag: t.tagName, color: "#7ee787" },
+    { tag: t.attributeName, color: "#79c0ff" },
+    { tag: t.attributeValue, color: "#f5b662" },
+    { tag: t.angleBracket, color: "#888" },
     { tag: t.processingInstruction, color: "#888" },
-    { tag: t.heading,           color: "#c8f562", fontWeight: "600" },
-    { tag: t.strong,            fontWeight: "bold" },
-    { tag: t.emphasis,          fontStyle: "italic" },
-    { tag: t.link,              color: "#79c0ff", textDecoration: "underline" },
-    { tag: t.url,               color: "#79c0ff" },
-    { tag: t.regexp,            color: "#ff7b72" },
-    { tag: t.escape,            color: "#ff7b72" },
-    { tag: t.invalid,           color: "#ff5f5f", textDecoration: "underline" },
-    { tag: t.meta,              color: "#555" },
-    { tag: t.color,             color: "#79c0ff" },
+    { tag: t.heading, color: "#c8f562", fontWeight: "600" },
+    { tag: t.strong, fontWeight: "bold" },
+    { tag: t.emphasis, fontStyle: "italic" },
+    { tag: t.link, color: "#79c0ff", textDecoration: "underline" },
+    { tag: t.url, color: "#79c0ff" },
+    { tag: t.regexp, color: "#ff7b72" },
+    { tag: t.escape, color: "#ff7b72" },
+    { tag: t.invalid, color: "#ff5f5f", textDecoration: "underline" },
+    { tag: t.meta, color: "#555" },
+    { tag: t.color, color: "#79c0ff" },
   ],
+  // ── Theme Overrides to fix alignment ──
+  "@": {
+    "&": {
+      height: "100%",
+    },
+    ".cm-content": {
+      paddingTop: "24px !important",
+      paddingBottom: "24px !important",
+    },
+    ".cm-gutters": {
+      paddingTop: "24px !important",
+      paddingBottom: "24px !important",
+      backgroundColor: "#141414",
+      borderRight: "1px solid #2a2a2a",
+      color: "#3a3a3a",
+    },
+    ".cm-gutterElement": {
+      padding: "0 16px 0 16px !important",
+      lineHeight: "1.6 !important",
+      height: "1.6em !important",
+      marginTop: "0 !important",
+      display: "block !important",
+    },
+    ".cm-line": {
+      padding: "0 24px !important",
+      lineHeight: "1.6 !important",
+      height: "1.6em !important",
+    },
+    ".cm-placeholder": {
+      paddingLeft: "24px !important",
+      lineHeight: "1.6 !important",
+    }
+  }
 });
 
 // ── Language registry ────────────────────────────────────────────────────────
 const LANGUAGES = [
-  { id: "plaintext",  label: "Plain Text",  ext: null },
-  { id: "javascript", label: "JavaScript",  ext: () => javascript({ jsx: true }) },
-  { id: "typescript", label: "TypeScript",  ext: () => javascript({ jsx: true, typescript: true }) },
-  { id: "jsx",        label: "JSX",         ext: () => javascript({ jsx: true }) },
-  { id: "tsx",        label: "TSX",         ext: () => javascript({ jsx: true, typescript: true }) },
-  { id: "python",     label: "Python",      ext: () => python() },
-  { id: "html",       label: "HTML",        ext: () => html() },
-  { id: "css",        label: "CSS",         ext: () => css() },
-  { id: "json",       label: "JSON",        ext: () => json() },
-  { id: "markdown",   label: "Markdown",    ext: () => markdown() },
-  { id: "sql",        label: "SQL",         ext: () => sql() },
-  { id: "rust",       label: "Rust",        ext: () => rust() },
-  { id: "java",       label: "Java",        ext: () => java() },
-  { id: "cpp",        label: "C / C++",     ext: () => cpp() },
-  { id: "php",        label: "PHP",         ext: () => php() },
+  { id: "plaintext", label: "Plain Text", ext: null },
+  { id: "javascript", label: "JavaScript", ext: () => javascript({ jsx: true }) },
+  { id: "typescript", label: "TypeScript", ext: () => javascript({ jsx: true, typescript: true }) },
+  { id: "jsx", label: "JSX", ext: () => javascript({ jsx: true }) },
+  { id: "tsx", label: "TSX", ext: () => javascript({ jsx: true, typescript: true }) },
+  { id: "python", label: "Python", ext: () => python() },
+  { id: "html", label: "HTML", ext: () => html() },
+  { id: "css", label: "CSS", ext: () => css() },
+  { id: "json", label: "JSON", ext: () => json() },
+  { id: "markdown", label: "Markdown", ext: () => markdown() },
+  { id: "sql", label: "SQL", ext: () => sql() },
+  { id: "rust", label: "Rust", ext: () => rust() },
+  { id: "java", label: "Java", ext: () => java() },
+  { id: "cpp", label: "C / C++", ext: () => cpp() },
+  { id: "php", label: "PHP", ext: () => php() },
 ];
 
 function generateId() {
@@ -109,24 +142,37 @@ function generateId() {
 function Page() {
   const { slug } = useParams();
 
-  const [page, setPage]       = useState(null);
+  const [page, setPage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [password, setPassword] = useState("");
   const [unlocked, setUnlocked] = useState(false);
-  const [isNew, setIsNew]     = useState(false);
-  const [saving, setSaving]   = useState(false);
-  const [saved, setSaved]     = useState(false);
+  const [isNew, setIsNew] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [lockError, setLockError] = useState("");
   const MAX_ATTEMPTS = 5;
 
-  const [tabs, setTabs]             = useState([]);
+  const [tabs, setTabs] = useState([]);
   const [activeTabId, setActiveTabId] = useState(null);
   const [renamingTabId, setRenamingTabId] = useState(null);
-  const [renameValue, setRenameValue]     = useState("");
+  const [renameValue, setRenameValue] = useState("");
+  const [isDirty, setIsDirty] = useState(false); // Track unsaved changes
   const saveFlashTimer = useRef(null);
 
   useEffect(() => { checkPage(); }, []);
+
+  // ── Confirmation on refresh ──
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty]);
 
   async function checkPage() {
     const { data, error } = await supabase
@@ -167,6 +213,7 @@ function Page() {
       setTabs(defaultTabs);
       setActiveTabId(defaultTabs[0].id);
       setUnlocked(true);
+      setIsDirty(false);
     } else {
       if (attempts >= MAX_ATTEMPTS) {
         setLockError("Too many failed attempts. Please refresh the page.");
@@ -191,6 +238,7 @@ function Page() {
     const newTab = { id: generateId(), label: `Tab ${tabs.length + 1}`, content: "", language: "plaintext" };
     setTabs((prev) => [...prev, newTab]);
     setActiveTabId(newTab.id);
+    setIsDirty(true);
   }
 
   function removeTab(id) {
@@ -198,6 +246,7 @@ function Page() {
     const remaining = tabs.filter((t) => t.id !== id);
     setTabs(remaining);
     if (activeTabId === id) setActiveTabId(remaining[remaining.length - 1].id);
+    setIsDirty(true);
   }
 
   function startRename(tab, e) {
@@ -208,16 +257,21 @@ function Page() {
 
   function commitRename(id) {
     const trimmed = renameValue.trim();
-    if (trimmed) setTabs((prev) => prev.map((t) => (t.id === id ? { ...t, label: trimmed } : t)));
+    if (trimmed) {
+      setTabs((prev) => prev.map((t) => (t.id === id ? { ...t, label: trimmed } : t)));
+      setIsDirty(true);
+    }
     setRenamingTabId(null);
   }
 
   function updateContent(value) {
     setTabs((prev) => prev.map((t) => (t.id === activeTabId ? { ...t, content: value } : t)));
+    setIsDirty(true);
   }
 
   function updateLanguage(langId) {
     setTabs((prev) => prev.map((t) => (t.id === activeTabId ? { ...t, language: langId } : t)));
+    setIsDirty(true);
   }
 
   const handleSave = useCallback(async () => {
@@ -232,6 +286,7 @@ function Page() {
     } else {
       clearTimeout(saveFlashTimer.current);
       setSaved(true);
+      setIsDirty(false);
       saveFlashTimer.current = setTimeout(() => setSaved(false), 2000);
     }
     setSaving(false);
