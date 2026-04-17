@@ -417,38 +417,101 @@ textarea {
   gap: 16px;
 }
 
-.editor-textarea {
+/* ── CodeMirror wrapper ── */
+.cm-wrapper {
   flex: 1;
-  width: 100%;
-  background: var(--surface);
+  overflow: hidden;
+  border-radius: 6px;
   border: 1px solid var(--border);
-  color: var(--text);
-  padding: 20px;
+  transition: border-color 0.15s;
+  display: flex;
+  flex-direction: column;
+}
+
+.cm-wrapper:focus-within {
+  border-color: var(--border-active);
+}
+
+.cm-wrapper .cm-editor {
+  height: 100%;
   font-size: 14px;
   line-height: 1.7;
-  border-radius: 6px;
-  resize: none;
-  outline: none;
   letter-spacing: 0.02em;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
 }
 
-.editor-textarea:focus {
-  border-color: var(--border-active);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.02);
+.cm-wrapper .cm-scroller {
+  font-family: var(--font-mono) !important;
+  overflow: auto;
 }
 
-.editor-textarea::placeholder {
-  color: var(--text-muted);
+.cm-wrapper .cm-content {
+  padding: 16px 0;
 }
 
+.cm-wrapper .cm-line {
+  padding: 0 20px;
+}
+
+.cm-wrapper .cm-gutters {
+  padding: 16px 0;
+  user-select: none;
+}
+
+.cm-wrapper .cm-gutter {
+  min-width: 40px;
+}
+
+.cm-wrapper .cm-gutterElement {
+  padding: 0 8px 0 12px;
+}
+
+.cm-wrapper .cm-placeholder {
+  color: #555;
+}
+
+.cm-wrapper .cm-cursor {
+  border-left-width: 2px !important;
+}
+
+/* ── Footer ── */
 .editor-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
+}
+
+.footer-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ── Language selector ── */
+.lang-select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  padding: 7px 10px;
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23555'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+
+.lang-select:hover,
+.lang-select:focus {
+  border-color: var(--border-active);
+  color: var(--text);
 }
 
 .editor-meta {

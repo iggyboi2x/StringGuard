@@ -1,7 +1,106 @@
 import { useParams } from "react-router-dom";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { supabase } from "../lib/supabaseClient";
 import bcrypt from "bcryptjs";
+import CodeMirror from "@uiw/react-codemirror";
+import { createTheme } from "@uiw/codemirror-themes";
+import { tags as t } from "@lezer/highlight";
+import { javascript } from "@codemirror/lang-javascript";
+import { python } from "@codemirror/lang-python";
+import { html } from "@codemirror/lang-html";
+import { css } from "@codemirror/lang-css";
+import { json } from "@codemirror/lang-json";
+import { markdown } from "@codemirror/lang-markdown";
+import { sql } from "@codemirror/lang-sql";
+import { rust } from "@codemirror/lang-rust";
+import { java } from "@codemirror/lang-java";
+import { cpp } from "@codemirror/lang-cpp";
+import { php } from "@codemirror/lang-php";
+
+// ── StringGuard CodeMirror Theme ────────────────────────────────────────────
+const sgTheme = createTheme({
+  theme: "dark",
+  settings: {
+    background: "#141414",
+    backgroundImage: "",
+    foreground: "#e8e8e8",
+    caret: "#c8f562",
+    selection: "rgba(200, 245, 98, 0.15)",
+    selectionMatch: "rgba(200, 245, 98, 0.08)",
+    lineHighlight: "rgba(255,255,255,0.025)",
+    gutterBackground: "#141414",
+    gutterForeground: "#3a3a3a",
+    gutterBorder: "transparent",
+    gutterActiveForeground: "#777",
+    fontFamily: '"IBM Plex Mono", monospace',
+  },
+  styles: [
+    { tag: t.comment,           color: "#555", fontStyle: "italic" },
+    { tag: t.lineComment,       color: "#555", fontStyle: "italic" },
+    { tag: t.blockComment,      color: "#555", fontStyle: "italic" },
+    { tag: t.docComment,        color: "#555", fontStyle: "italic" },
+    { tag: t.keyword,           color: "#c8f562", fontWeight: "500" },
+    { tag: t.controlKeyword,    color: "#c8f562" },
+    { tag: t.moduleKeyword,     color: "#c8f562" },
+    { tag: t.definitionKeyword, color: "#c8f562" },
+    { tag: t.operatorKeyword,   color: "#c8f562" },
+    { tag: [t.string, t.special(t.brace)], color: "#f5b662" },
+    { tag: t.character,         color: "#f5b662" },
+    { tag: t.number,            color: "#79c0ff" },
+    { tag: t.integer,           color: "#79c0ff" },
+    { tag: t.float,             color: "#79c0ff" },
+    { tag: t.bool,              color: "#c8f562" },
+    { tag: t.null,              color: "#c8f562" },
+    { tag: t.atom,              color: "#c8f562" },
+    { tag: t.self,              color: "#ff7b72" },
+    { tag: t.operator,          color: "#e8e8e8" },
+    { tag: t.variableName,      color: "#e8e8e8" },
+    { tag: t.definition(t.variableName), color: "#d2a8ff" },
+    { tag: t.function(t.variableName),   color: "#d2a8ff" },
+    { tag: t.function(t.propertyName),   color: "#d2a8ff" },
+    { tag: [t.typeName, t.namespace],    color: "#ffa657" },
+    { tag: t.className,         color: "#ffa657" },
+    { tag: t.annotation,        color: "#ffa657" },
+    { tag: t.propertyName,      color: "#79c0ff" },
+    { tag: t.punctuation,       color: "#888" },
+    { tag: t.separator,         color: "#888" },
+    { tag: t.bracket,           color: "#888" },
+    { tag: t.tagName,           color: "#7ee787" },
+    { tag: t.attributeName,     color: "#79c0ff" },
+    { tag: t.attributeValue,    color: "#f5b662" },
+    { tag: t.angleBracket,      color: "#888" },
+    { tag: t.processingInstruction, color: "#888" },
+    { tag: t.heading,           color: "#c8f562", fontWeight: "600" },
+    { tag: t.strong,            fontWeight: "bold" },
+    { tag: t.emphasis,          fontStyle: "italic" },
+    { tag: t.link,              color: "#79c0ff", textDecoration: "underline" },
+    { tag: t.url,               color: "#79c0ff" },
+    { tag: t.regexp,            color: "#ff7b72" },
+    { tag: t.escape,            color: "#ff7b72" },
+    { tag: t.invalid,           color: "#ff5f5f", textDecoration: "underline" },
+    { tag: t.meta,              color: "#555" },
+    { tag: t.color,             color: "#79c0ff" },
+  ],
+});
+
+// ── Language registry ────────────────────────────────────────────────────────
+const LANGUAGES = [
+  { id: "plaintext",  label: "Plain Text",  ext: null },
+  { id: "javascript", label: "JavaScript",  ext: () => javascript({ jsx: true }) },
+  { id: "typescript", label: "TypeScript",  ext: () => javascript({ jsx: true, typescript: true }) },
+  { id: "jsx",        label: "JSX",         ext: () => javascript({ jsx: true }) },
+  { id: "tsx",        label: "TSX",         ext: () => javascript({ jsx: true, typescript: true }) },
+  { id: "python",     label: "Python",      ext: () => python() },
+  { id: "html",       label: "HTML",        ext: () => html() },
+  { id: "css",        label: "CSS",         ext: () => css() },
+  { id: "json",       label: "JSON",        ext: () => json() },
+  { id: "markdown",   label: "Markdown",    ext: () => markdown() },
+  { id: "sql",        label: "SQL",         ext: () => sql() },
+  { id: "rust",       label: "Rust",        ext: () => rust() },
+  { id: "java",       label: "Java",        ext: () => java() },
+  { id: "cpp",        label: "C / C++",     ext: () => cpp() },
+  { id: "php",        label: "PHP",         ext: () => php() },
+];
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
@@ -10,26 +109,24 @@ function generateId() {
 function Page() {
   const { slug } = useParams();
 
-  const [page, setPage] = useState(null);
+  const [page, setPage]       = useState(null);
   const [loading, setLoading] = useState(true);
   const [password, setPassword] = useState("");
   const [unlocked, setUnlocked] = useState(false);
-  const [isNew, setIsNew] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [isNew, setIsNew]     = useState(false);
+  const [saving, setSaving]   = useState(false);
+  const [saved, setSaved]     = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [lockError, setLockError] = useState("");
   const MAX_ATTEMPTS = 5;
 
-  const [tabs, setTabs] = useState([]);
+  const [tabs, setTabs]             = useState([]);
   const [activeTabId, setActiveTabId] = useState(null);
   const [renamingTabId, setRenamingTabId] = useState(null);
-  const [renameValue, setRenameValue] = useState("");
+  const [renameValue, setRenameValue]     = useState("");
   const saveFlashTimer = useRef(null);
 
-  useEffect(() => {
-    checkPage();
-  }, []);
+  useEffect(() => { checkPage(); }, []);
 
   async function checkPage() {
     const { data, error } = await supabase
@@ -40,17 +137,15 @@ function Page() {
 
     if (error) {
       console.error("Supabase error:", error);
-      // Treat any fetch error as a new page so the user can still proceed
       setIsNew(true);
     } else if (!data) {
-      // No row found — this is a new page
       setIsNew(true);
     } else {
       setPage(data);
       const loadedTabs =
         data.tabs && data.tabs.length > 0
-          ? data.tabs
-          : [{ id: generateId(), label: "Tab 1", content: "" }];
+          ? data.tabs.map((tab) => ({ language: "plaintext", ...tab }))
+          : [{ id: generateId(), label: "Tab 1", content: "", language: "plaintext" }];
       setTabs(loadedTabs);
       setActiveTabId(loadedTabs[0].id);
     }
@@ -59,22 +154,15 @@ function Page() {
 
   async function handleSubmit() {
     if (!password) return;
-
     if (isNew) {
       const hashed = await bcrypt.hash(password, 10);
-      const defaultTabs = [{ id: generateId(), label: "Tab 1", content: "" }];
-
+      const defaultTabs = [{ id: generateId(), label: "Tab 1", content: "", language: "plaintext" }];
       const { data, error } = await supabase
         .from("pages")
         .insert([{ slug, password: hashed, tabs: defaultTabs }])
         .select()
         .single();
-
-      if (error) {
-        console.error(error);
-        return;
-      }
-
+      if (error) { console.error(error); return; }
       setPage(data);
       setTabs(defaultTabs);
       setActiveTabId(defaultTabs[0].id);
@@ -100,11 +188,7 @@ function Page() {
   }
 
   function addTab() {
-    const newTab = {
-      id: generateId(),
-      label: `Tab ${tabs.length + 1}`,
-      content: "",
-    };
+    const newTab = { id: generateId(), label: `Tab ${tabs.length + 1}`, content: "", language: "plaintext" };
     setTabs((prev) => [...prev, newTab]);
     setActiveTabId(newTab.id);
   }
@@ -124,27 +208,24 @@ function Page() {
 
   function commitRename(id) {
     const trimmed = renameValue.trim();
-    if (trimmed) {
-      setTabs((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, label: trimmed } : t))
-      );
-    }
+    if (trimmed) setTabs((prev) => prev.map((t) => (t.id === id ? { ...t, label: trimmed } : t)));
     setRenamingTabId(null);
   }
 
   function updateContent(value) {
-    setTabs((prev) =>
-      prev.map((t) => (t.id === activeTabId ? { ...t, content: value } : t)),
-    );
+    setTabs((prev) => prev.map((t) => (t.id === activeTabId ? { ...t, content: value } : t)));
   }
 
-  async function handleSave() {
+  function updateLanguage(langId) {
+    setTabs((prev) => prev.map((t) => (t.id === activeTabId ? { ...t, language: langId } : t)));
+  }
+
+  const handleSave = useCallback(async () => {
     setSaving(true);
     const { error } = await supabase
       .from("pages")
       .update({ tabs, updated_at: new Date() })
       .eq("slug", slug);
-
     if (error) {
       console.error(error);
       alert("Failed to save");
@@ -154,14 +235,26 @@ function Page() {
       saveFlashTimer.current = setTimeout(() => setSaved(false), 2000);
     }
     setSaving(false);
-  }
+  }, [tabs, slug]);
 
-  const handleKey = (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === "s") {
-      e.preventDefault();
-      handleSave();
-    }
-  };
+  // Global Ctrl+S / Cmd+S
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [handleSave]);
+
+  // Memoised CodeMirror extensions for active tab's language
+  const activeTab = tabs.find((t) => t.id === activeTabId);
+  const cmExtensions = useMemo(() => {
+    const lang = LANGUAGES.find((l) => l.id === (activeTab?.language || "plaintext"));
+    return lang?.ext ? [lang.ext()] : [];
+  }, [activeTab?.language]);
 
   if (loading) {
     return (
@@ -171,8 +264,6 @@ function Page() {
       </div>
     );
   }
-
-  const activeTab = tabs.find((t) => t.id === activeTabId);
 
   return (
     <>
@@ -185,14 +276,9 @@ function Page() {
             </h2>
             <p className="lock-sub">
               {isNew ? (
-                <>
-                  Set a password for <code>{slug}</code>. You'll need it every
-                  time you access this page.
-                </>
+                <>Set a password for <code>{slug}</code>. You'll need it every time you access this page.</>
               ) : (
-                <>
-                  Enter the password for <code>{slug}</code> to unlock.
-                </>
+                <>Enter the password for <code>{slug}</code> to unlock.</>
               )}
             </p>
             <div className="input-group">
@@ -207,11 +293,7 @@ function Page() {
                 autoFocus
               />
               {lockError && <p className="lock-error">{lockError}</p>}
-              <button
-                className="sg-btn"
-                onClick={handleSubmit}
-                disabled={!password}
-              >
+              <button className="sg-btn" onClick={handleSubmit} disabled={!password}>
                 {isNew ? "Create Page →" : "Unlock →"}
               </button>
             </div>
@@ -219,6 +301,7 @@ function Page() {
         </div>
       ) : (
         <div className="editor-shell fade-up">
+          {/* ── Tab bar ── */}
           <div className="tab-bar">
             {tabs.map((tab) => (
               <button
@@ -246,48 +329,62 @@ function Page() {
                 )}
                 <span
                   className="tab-close"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeTab(tab.id);
-                  }}
+                  onClick={(e) => { e.stopPropagation(); removeTab(tab.id); }}
                   title="Close tab"
-                >
-                  ✕
-                </span>
+                >✕</span>
               </button>
             ))}
-            <button className="tab-add" onClick={addTab} title="New tab">
-              +
-            </button>
+            <button className="tab-add" onClick={addTab} title="New tab">+</button>
             <span className="tab-hint">double-click to rename</span>
           </div>
 
+          {/* ── Editor ── */}
           <div className="editor-area">
             {activeTab && (
-              <textarea
-                key={activeTabId}
-                className="editor-textarea"
-                value={activeTab.content}
-                onChange={(e) => updateContent(e.target.value)}
-                onKeyDown={handleKey}
-                placeholder="Start writing…"
-                autoFocus
-                spellCheck={false}
-              />
+              <div className="cm-wrapper">
+                <CodeMirror
+                  value={activeTab.content}
+                  height="100%"
+                  theme={sgTheme}
+                  extensions={cmExtensions}
+                  onChange={updateContent}
+                  placeholder="Start writing…"
+                  basicSetup={{
+                    lineNumbers: true,
+                    foldGutter: true,
+                    dropCursor: true,
+                    allowMultipleSelections: true,
+                    indentOnInput: true,
+                    bracketMatching: true,
+                    closeBrackets: true,
+                    autocompletion: true,
+                    highlightActiveLine: true,
+                    highlightSelectionMatches: true,
+                    tabSize: 2,
+                  }}
+                />
+              </div>
             )}
 
+            {/* ── Footer ── */}
             <div className="editor-footer">
-              <span className={`save-flash ${saved ? "visible" : ""}`}>
-                ✓ Saved
-              </span>
-              <span className="editor-meta">Ctrl+S to save</span>
-              <button
-                className="save-btn"
-                onClick={handleSave}
-                disabled={saving}
-              >
-                {saving ? "Saving…" : "Save"}
-              </button>
+              <span className={`save-flash ${saved ? "visible" : ""}`}>✓ Saved</span>
+              <div className="footer-right">
+                <span className="editor-meta">Ctrl+S to save</span>
+                <select
+                  className="lang-select"
+                  value={activeTab?.language || "plaintext"}
+                  onChange={(e) => updateLanguage(e.target.value)}
+                  title="Syntax highlighting language"
+                >
+                  {LANGUAGES.map((lang) => (
+                    <option key={lang.id} value={lang.id}>{lang.label}</option>
+                  ))}
+                </select>
+                <button className="save-btn" onClick={handleSave} disabled={saving}>
+                  {saving ? "Saving…" : "Save"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
