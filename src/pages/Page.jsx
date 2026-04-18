@@ -17,6 +17,14 @@ import { java } from "@codemirror/lang-java";
 import { cpp } from "@codemirror/lang-cpp";
 import { php } from "@codemirror/lang-php";
 
+// Tiptap Imports
+import { useEditor, EditorContent } from "@tiptap/react";
+import { StarterKit } from "@tiptap/starter-kit";
+import { TextStyle } from "@tiptap/extension-text-style";
+import { FontSize } from "tiptap-extension-font-size";
+import { Link } from "@tiptap/extension-link";
+import { Underline } from "@tiptap/extension-underline";
+
 // ── StringGuard CodeMirror Theme ────────────────────────────────────────────
 const sgTheme = createTheme({
   theme: "dark",
@@ -139,6 +147,126 @@ function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
+// ── Tiptap Editor & Toolbar ──────────────────────────────────────────────────
+function DocToolbar({ editor }) {
+  if (!editor) return null;
+
+  return (
+    <div className="doc-toolbar">
+      <div className="toolbar-group">
+        <select
+          className="toolbar-select font-size-select"
+          onChange={(e) => editor.chain().focus().setFontSize(`${e.target.value}px`).run()}
+          value={editor.getAttributes("textStyle").fontSize?.replace("px", "") || "16"}
+        >
+          {[12, 14, 16, 18, 20, 24, 30, 36, 48].map((s) => (
+            <option key={s} value={s}>{s}px</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="toolbar-group">
+        <button
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          className={editor.isActive("bold") ? "active" : ""}
+          title="Bold"
+        >
+          <b>B</b>
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          className={editor.isActive("italic") ? "active" : ""}
+          title="Italic"
+        >
+          <i>I</i>
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleUnderline().run()}
+          className={editor.isActive("underline") ? "active" : ""}
+          title="Underline"
+        >
+          <u>U</u>
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleStrike().run()}
+          className={editor.isActive("strike") ? "active" : ""}
+          title="Strikethrough"
+        >
+          <s>S</s>
+        </button>
+      </div>
+
+      <div className="toolbar-group">
+        <button
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          className={editor.isActive("bulletList") ? "active" : ""}
+          title="Bullet List"
+        >
+          • List
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          className={editor.isActive("orderedList") ? "active" : ""}
+          title="Numbered List"
+        >
+          1. List
+        </button>
+      </div>
+
+      <div className="toolbar-group">
+        <button
+          onClick={() => {
+            const url = window.prompt("Enter URL");
+            if (url) editor.chain().focus().setLink({ href: url }).run();
+          }}
+          className={editor.isActive("link") ? "active" : ""}
+          title="Add Link"
+        >
+          Link 🔗
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function DocEditorArea({ content, onChange, fontSize }) {
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      TextStyle,
+      FontSize,
+      Link.configure({ openOnClick: false }),
+      Underline,
+    ],
+    content,
+    onUpdate: ({ editor }) => {
+      onChange(editor.getHTML());
+    },
+    editorProps: {
+      attributes: {
+        class: "tiptap-content",
+      },
+    },
+  }, [fontSize]);
+
+  useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      editor.commands.setContent(content, false);
+    }
+  }, [content, editor]);
+
+  if (!editor) return null;
+
+  return (
+    <div className="doc-editor-container" style={{ "--editor-font-size": `${fontSize}px` }}>
+      <DocToolbar editor={editor} />
+      <div className="tiptap-editor-wrap">
+        <EditorContent editor={editor} />
+      </div>
+    </div>
+  );
+}
+
 function Page() {
   const { slug } = useParams();
 
@@ -157,7 +285,9 @@ function Page() {
   const [activeTabId, setActiveTabId] = useState(null);
   const [renamingTabId, setRenamingTabId] = useState(null);
   const [renameValue, setRenameValue] = useState("");
-  const [isDirty, setIsDirty] = useState(false); // Track unsaved changes
+  const [isDirty, setIsDirty] = useState(false);
+  const [fontSize, setFontSize] = useState(14);
+  const [showTypePicker, setShowTypePicker] = useState(false); // New Tab Picker state
   const saveFlashTimer = useRef(null);
 
   useEffect(() => { checkPage(); }, []);
@@ -190,8 +320,12 @@ function Page() {
       setPage(data);
       const loadedTabs =
         data.tabs && data.tabs.length > 0
-          ? data.tabs.map((tab) => ({ language: "plaintext", ...tab }))
-          : [{ id: generateId(), label: "Tab 1", content: "", language: "plaintext" }];
+          ? data.tabs.map((tab) => ({ 
+              language: "plaintext", 
+              type: "code", // Default existing to code
+              ...tab 
+            }))
+          : [{ id: generateId(), label: "Tab 1", content: "", language: "plaintext", type: "code" }];
       setTabs(loadedTabs);
       setActiveTabId(loadedTabs[0].id);
     }
@@ -202,7 +336,7 @@ function Page() {
     if (!password) return;
     if (isNew) {
       const hashed = await bcrypt.hash(password, 10);
-      const defaultTabs = [{ id: generateId(), label: "Tab 1", content: "", language: "plaintext" }];
+      const defaultTabs = [{ id: generateId(), label: "Tab 1", content: "", language: "plaintext", type: "code" }];
       const { data, error } = await supabase
         .from("pages")
         .insert([{ slug, password: hashed, tabs: defaultTabs }])
@@ -234,15 +368,24 @@ function Page() {
     }
   }
 
-  function addTab() {
-    const newTab = { id: generateId(), label: `Tab ${tabs.length + 1}`, content: "", language: "plaintext" };
+  function addTab(type = "code") {
+    const label = `Tab ${tabs.length + 1}`;
+    const newTab = { 
+      id: generateId(), 
+      label, 
+      content: "", 
+      language: "plaintext", 
+      type 
+    };
     setTabs((prev) => [...prev, newTab]);
     setActiveTabId(newTab.id);
     setIsDirty(true);
+    setShowTypePicker(false);
   }
 
   function removeTab(id) {
     if (tabs.length === 1) return;
+    if (!window.confirm("Are you sure you want to close this tab?")) return;
     const remaining = tabs.filter((t) => t.id !== id);
     setTabs(remaining);
     if (activeTabId === id) setActiveTabId(remaining[remaining.length - 1].id);
@@ -265,7 +408,11 @@ function Page() {
   }
 
   function updateContent(value) {
-    setTabs((prev) => prev.map((t) => (t.id === activeTabId ? { ...t, content: value } : t)));
+    setTabs((prev) =>
+      prev.map((t) =>
+        t.id === activeTabId ? { ...t, content: value } : t
+      )
+    );
     setIsDirty(true);
   }
 
@@ -389,35 +536,56 @@ function Page() {
                 >✕</span>
               </button>
             ))}
-            <button className="tab-add" onClick={addTab} title="New tab">+</button>
+            <div className="tab-add-wrap">
+              <button
+                className="tab-add"
+                onClick={() => addTab("code")}
+                title="New tab"
+              >
+                +
+              </button>
+            </div>
             <span className="tab-hint">double-click to rename</span>
           </div>
 
-          {/* ── Editor ── */}
+
+
+          {/* ── Editor Area ── */}
           <div className="editor-area">
             {activeTab && (
-              <div className="cm-wrapper">
-                <CodeMirror
-                  value={activeTab.content}
-                  height="100%"
-                  theme={sgTheme}
-                  extensions={cmExtensions}
-                  onChange={updateContent}
-                  placeholder="Start writing…"
-                  basicSetup={{
-                    lineNumbers: true,
-                    foldGutter: true,
-                    dropCursor: true,
-                    allowMultipleSelections: true,
-                    indentOnInput: true,
-                    bracketMatching: true,
-                    closeBrackets: true,
-                    autocompletion: true,
-                    highlightActiveLine: true,
-                    highlightSelectionMatches: true,
-                    tabSize: 2,
-                  }}
-                />
+              <div
+                className="cm-wrapper"
+                style={{ "--editor-font-size": `${fontSize}px` }}
+              >
+                {activeTab.type === "doc" ? (
+                  <DocEditorArea
+                    content={activeTab.content}
+                    onChange={updateContent}
+                    fontSize={fontSize}
+                  />
+                ) : (
+                  <CodeMirror
+                    value={activeTab.content}
+                    height="100%"
+                    theme={sgTheme}
+                    extensions={cmExtensions}
+                    onChange={updateContent}
+                    placeholder="Start writing…"
+                    basicSetup={{
+                      lineNumbers: true,
+                      foldGutter: true,
+                      dropCursor: true,
+                      allowMultipleSelections: true,
+                      indentOnInput: true,
+                      bracketMatching: true,
+                      closeBrackets: true,
+                      autocompletion: true,
+                      highlightActiveLine: true,
+                      highlightSelectionMatches: true,
+                      tabSize: 2,
+                    }}
+                  />
+                )}
               </div>
             )}
 
@@ -425,17 +593,28 @@ function Page() {
             <div className="editor-footer">
               <span className={`save-flash ${saved ? "visible" : ""}`}>✓ Saved</span>
               <div className="footer-right">
-                <span className="editor-meta">Ctrl+S to save</span>
+                {activeTab?.type !== "doc" && (
+                  <select
+                    className="lang-select"
+                    value={activeTab?.language || "plaintext"}
+                    onChange={(e) => updateLanguage(e.target.value)}
+                  >
+                    {LANGUAGES.map((l) => (
+                      <option key={l.id} value={l.id}>{l.label}</option>
+                    ))}
+                  </select>
+                )}
                 <select
                   className="lang-select"
-                  value={activeTab?.language || "plaintext"}
-                  onChange={(e) => updateLanguage(e.target.value)}
-                  title="Syntax highlighting language"
+                  value={fontSize}
+                  onChange={(e) => setFontSize(Number(e.target.value))}
+                  title="Text Content Size"
                 >
-                  {LANGUAGES.map((lang) => (
-                    <option key={lang.id} value={lang.id}>{lang.label}</option>
+                  {[12, 14, 16, 18, 20, 24, 30, 36].map((s) => (
+                    <option key={s} value={s}>{s}px</option>
                   ))}
                 </select>
+                <span className="editor-meta">Ctrl+S to save</span>
                 <button className="save-btn" onClick={handleSave} disabled={saving}>
                   {saving ? "Saving…" : "Save"}
                 </button>

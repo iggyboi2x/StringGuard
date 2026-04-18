@@ -443,7 +443,7 @@ textarea {
   right: 0;
   bottom: 0;
   height: 100% !important;
-  font-size: 14px;
+  font-size: var(--editor-font-size, 14px);
   letter-spacing: 0.02em;
   outline: none !important;
 }
