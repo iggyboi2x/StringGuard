@@ -149,80 +149,97 @@ function generateId() {
 
 // ── Tiptap Editor & Toolbar ──────────────────────────────────────────────────
 function DocToolbar({ editor }) {
+  const [inputSize, setInputSize] = useState("20");
+  const [rev, setRev] = useState(0);
+
+  useEffect(() => {
+    if (!editor) return;
+    const update = () => {
+      setRev((r) => r + 1); // Force robust React re-renders on styling clicks
+      const markSize = editor.getAttributes("textStyle").fontSize?.replace("px", "");
+      setInputSize(markSize || "20");
+    };
+    editor.on("selectionUpdate", update);
+    editor.on("transaction", update);
+    return () => {
+      editor.off("selectionUpdate", update);
+      editor.off("transaction", update);
+    };
+  }, [editor]);
+
   if (!editor) return null;
+
+  const handleSizeChange = (newSize) => {
+    const valid = Math.max(20, newSize);
+    setInputSize(valid.toString());
+    editor.chain().focus().setFontSize(`${valid}px`).run();
+  };
 
   return (
     <div className="doc-toolbar">
       <div className="toolbar-group">
-        <select
-          className="toolbar-select font-size-select"
-          onChange={(e) => editor.chain().focus().setFontSize(`${e.target.value}px`).run()}
-          value={editor.getAttributes("textStyle").fontSize?.replace("px", "") || "16"}
+        <button
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => handleSizeChange(Number(inputSize) - 5)}
+          className="toolbar-btn"
+          title="Decrease font size"
         >
-          {[12, 14, 16, 18, 20, 24, 30, 36, 48].map((s) => (
-            <option key={s} value={s}>{s}px</option>
-          ))}
-        </select>
+          −
+        </button>
+        <input
+          type="text"
+          readOnly
+          className="lang-select"
+          style={{ width: "40px", padding: "0", backgroundImage: "none", border: "none", height: "100%", borderRadius: "0", textAlign: "center", borderRight: "1px solid var(--border)", cursor: "default", userSelect: "none" }}
+          value={inputSize}
+          title="Font size"
+        />
+        <button
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => handleSizeChange(Number(inputSize) + 5)}
+          className="toolbar-btn"
+          title="Increase font size"
+        >
+          +
+        </button>
       </div>
 
       <div className="toolbar-group">
         <button
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => editor.chain().focus().toggleBold().run()}
-          className={editor.isActive("bold") ? "active" : ""}
+          className={`toolbar-btn ${editor.isActive("bold") ? "active" : ""}`}
           title="Bold"
+          style={{ fontWeight: "bold" }}
         >
-          <b>B</b>
+          B
         </button>
         <button
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => editor.chain().focus().toggleItalic().run()}
-          className={editor.isActive("italic") ? "active" : ""}
+          className={`toolbar-btn ${editor.isActive("italic") ? "active" : ""}`}
           title="Italic"
+          style={{ fontStyle: "italic" }}
         >
-          <i>I</i>
+          I
         </button>
         <button
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => editor.chain().focus().toggleUnderline().run()}
-          className={editor.isActive("underline") ? "active" : ""}
+          className={`toolbar-btn ${editor.isActive("underline") ? "active" : ""}`}
           title="Underline"
+          style={{ textDecoration: "underline" }}
         >
-          <u>U</u>
+          U
         </button>
         <button
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => editor.chain().focus().toggleStrike().run()}
-          className={editor.isActive("strike") ? "active" : ""}
+          className={`toolbar-btn ${editor.isActive("strike") ? "active" : ""}`}
           title="Strikethrough"
+          style={{ textDecoration: "line-through" }}
         >
-          <s>S</s>
-        </button>
-      </div>
-
-      <div className="toolbar-group">
-        <button
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-          className={editor.isActive("bulletList") ? "active" : ""}
-          title="Bullet List"
-        >
-          • List
-        </button>
-        <button
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          className={editor.isActive("orderedList") ? "active" : ""}
-          title="Numbered List"
-        >
-          1. List
-        </button>
-      </div>
-
-      <div className="toolbar-group">
-        <button
-          onClick={() => {
-            const url = window.prompt("Enter URL");
-            if (url) editor.chain().focus().setLink({ href: url }).run();
-          }}
-          className={editor.isActive("link") ? "active" : ""}
-          title="Add Link"
-        >
-          Link 🔗
+          S
         </button>
       </div>
     </div>
@@ -240,6 +257,12 @@ function DocEditorArea({ content, onChange, fontSize }) {
     ],
     content,
     onUpdate: ({ editor }) => {
+      // Intercept complete deletion events to purge sticking formatting queues
+      if (editor.state.doc.textContent.length === 0) {
+        if (editor.state.storedMarks || Object.keys(editor.getAttributes("textStyle")).length > 0) {
+          editor.commands.unsetAllMarks();
+        }
+      }
       onChange(editor.getHTML());
     },
     editorProps: {
@@ -258,10 +281,10 @@ function DocEditorArea({ content, onChange, fontSize }) {
   if (!editor) return null;
 
   return (
-    <div className="doc-editor-container" style={{ "--editor-font-size": `${fontSize}px` }}>
+    <div className="doc-editor-container" style={{ "--editor-font-size": fontSize }}>
       <DocToolbar editor={editor} />
-      <div className="tiptap-editor-wrap">
-        <EditorContent editor={editor} />
+      <div className="tiptap-editor-wrap" onClick={() => editor.chain().focus().run()}>
+        <EditorContent editor={editor} className="tiptap-content-wrapper" />
       </div>
     </div>
   );
@@ -320,14 +343,14 @@ function Page() {
       setPage(data);
       const loadedTabs =
         data.tabs && data.tabs.length > 0
-          ? data.tabs.map((tab) => ({ 
-              language: "plaintext", 
-              type: "code", // Default existing to code
-              ...tab 
-            }))
-          : [{ id: generateId(), label: "Tab 1", content: "", language: "plaintext", type: "code" }];
+          ? data.tabs.map((tab) => ({
+            language: "plaintext",
+            type: "code", // Default existing to code
+            ...tab
+          }))
+          : [];
       setTabs(loadedTabs);
-      setActiveTabId(loadedTabs[0].id);
+      if (loadedTabs.length > 0) setActiveTabId(loadedTabs[0].id);
     }
     setLoading(false);
   }
@@ -336,7 +359,7 @@ function Page() {
     if (!password) return;
     if (isNew) {
       const hashed = await bcrypt.hash(password, 10);
-      const defaultTabs = [{ id: generateId(), label: "Tab 1", content: "", language: "plaintext", type: "code" }];
+      const defaultTabs = [];
       const { data, error } = await supabase
         .from("pages")
         .insert([{ slug, password: hashed, tabs: defaultTabs }])
@@ -345,7 +368,6 @@ function Page() {
       if (error) { console.error(error); return; }
       setPage(data);
       setTabs(defaultTabs);
-      setActiveTabId(defaultTabs[0].id);
       setUnlocked(true);
       setIsDirty(false);
     } else {
@@ -369,13 +391,18 @@ function Page() {
   }
 
   function addTab(type = "code") {
-    const label = `Tab ${tabs.length + 1}`;
-    const newTab = { 
-      id: generateId(), 
-      label, 
-      content: "", 
-      language: "plaintext", 
-      type 
+    let maxNum = 0;
+    tabs.forEach(t => {
+      const match = t.label.match(/^Tab (\d+)$/);
+      if (match) maxNum = Math.max(maxNum, parseInt(match[1], 10));
+    });
+    const label = `Tab ${maxNum + 1}`;
+    const newTab = {
+      id: generateId(),
+      label,
+      content: "",
+      language: "plaintext",
+      type
     };
     setTabs((prev) => [...prev, newTab]);
     setActiveTabId(newTab.id);
@@ -384,11 +411,14 @@ function Page() {
   }
 
   function removeTab(id) {
-    if (tabs.length === 1) return;
     if (!window.confirm("Are you sure you want to close this tab?")) return;
     const remaining = tabs.filter((t) => t.id !== id);
     setTabs(remaining);
-    if (activeTabId === id) setActiveTabId(remaining[remaining.length - 1].id);
+    if (activeTabId === id && remaining.length > 0) {
+      setActiveTabId(remaining[remaining.length - 1].id);
+    } else if (remaining.length === 0) {
+      setActiveTabId(null);
+    }
     setIsDirty(true);
   }
 
@@ -495,9 +525,15 @@ function Page() {
                 autoFocus
               />
               {lockError && <p className="lock-error">{lockError}</p>}
-              <button className="sg-btn" onClick={handleSubmit} disabled={!password}>
-                {isNew ? "Create Page →" : "Unlock →"}
-              </button>
+              {isNew ? (
+                <button className="sg-btn" onClick={() => handleSubmit()} disabled={!password}>
+                  Create Page →
+                </button>
+              ) : (
+                <button className="sg-btn" onClick={() => handleSubmit()} disabled={!password}>
+                  Unlock →
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -538,33 +574,59 @@ function Page() {
             ))}
             <div className="tab-add-wrap">
               <button
-                className="tab-add"
-                onClick={() => addTab("code")}
+                className={`tab-add ${showTypePicker ? "active" : ""}`}
+                onClick={() => setShowTypePicker(!showTypePicker)}
                 title="New tab"
               >
                 +
               </button>
+
             </div>
             <span className="tab-hint">double-click to rename</span>
           </div>
+
+          {/* ── Type Picker Modal ── */}
+          {showTypePicker && (
+            <>
+              <div className="type-picker-overlay" onClick={() => setShowTypePicker(false)} />
+              <div className="type-picker-popup fade-in-center">
+                <button className="type-picker-btn" onClick={() => addTab("doc")}>
+                  <div className="type-icon">📄</div>
+                  <div className="type-info">
+                    <span className="type-title">Rich Document</span>
+                    <span className="type-desc">Format text with sizes & styles</span>
+                  </div>
+                </button>
+                <button className="type-picker-btn" onClick={() => addTab("code")}>
+                  <div className="type-icon code-icon">⌨️</div>
+                  <div className="type-info">
+                    <span className="type-title">Code Snippet</span>
+                    <span className="type-desc">Plaintext editor & syntax highlighting</span>
+                  </div>
+                </button>
+              </div>
+            </>
+          )}
 
 
 
           {/* ── Editor Area ── */}
           <div className="editor-area">
-            {activeTab && (
+            {activeTab ? (
               <div
                 className="cm-wrapper"
                 style={{ "--editor-font-size": `${fontSize}px` }}
               >
                 {activeTab.type === "doc" ? (
                   <DocEditorArea
+                    key={`doc-${activeTab.id}`}
                     content={activeTab.content}
                     onChange={updateContent}
                     fontSize={fontSize}
                   />
                 ) : (
                   <CodeMirror
+                    key={`code-${activeTab.id}`}
                     value={activeTab.content}
                     height="100%"
                     theme={sgTheme}
@@ -587,6 +649,30 @@ function Page() {
                   />
                 )}
               </div>
+            ) : (
+              <div className="empty-state-wrap">
+                <div className="empty-state-content fade-up">
+                  <div className="empty-state-icon">✨</div>
+                  <h2 className="empty-state-title">Choose your starting editor</h2>
+                  <p className="empty-state-sub">Start building your page from scratch.</p>
+                  <div className="empty-state-actions">
+                    <button className="type-picker-btn" onClick={() => addTab("doc")} style={{ background: "var(--surface2)", border: "1px solid var(--border)", width: "100%" }}>
+                      <div className="type-icon">📄</div>
+                      <div className="type-info">
+                        <span className="type-title">Rich Document</span>
+                        <span className="type-desc">Format text with sizes & styles</span>
+                      </div>
+                    </button>
+                    <button className="type-picker-btn" onClick={() => addTab("code")} style={{ background: "var(--surface2)", border: "1px solid var(--border)", width: "100%" }}>
+                      <div className="type-icon code-icon">⌨️</div>
+                      <div className="type-info">
+                        <span className="type-title">Code Snippet</span>
+                        <span className="type-desc">Plaintext editor & syntax highlighting</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* ── Footer ── */}
@@ -604,16 +690,19 @@ function Page() {
                     ))}
                   </select>
                 )}
-                <select
-                  className="lang-select"
-                  value={fontSize}
-                  onChange={(e) => setFontSize(Number(e.target.value))}
-                  title="Text Content Size"
-                >
-                  {[12, 14, 16, 18, 20, 24, 30, 36].map((s) => (
-                    <option key={s} value={s}>{s}px</option>
-                  ))}
-                </select>
+                <div className="footer-slider-wrap" style={{ display: "flex", alignItems: "center", gap: "8px", background: "var(--surface2)", padding: "0 10px", borderRadius: "4px", border: "1px solid var(--border)", height: "30px" }}>
+                  <span style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Change Content Size</span>
+                  <input
+                    type="range"
+                    min="10"
+                    max="48"
+                    value={fontSize}
+                    onChange={(e) => setFontSize(Number(e.target.value))}
+                    style={{ width: "80px", cursor: "pointer", accentColor: "var(--accent)" }}
+                    title="Editor Base Font Size"
+                  />
+                  <span style={{ fontSize: "11px", color: "var(--text-dim)", fontFamily: "var(--font-mono)", width: "30px", textAlign: "right" }}>{fontSize}px</span>
+                </div>
                 <span className="editor-meta">Ctrl+S to save</span>
                 <button className="save-btn" onClick={handleSave} disabled={saving}>
                   {saving ? "Saving…" : "Save"}

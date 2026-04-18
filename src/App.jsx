@@ -4,6 +4,7 @@ import {
   Route,
   useLocation,
   useNavigate,
+  Navigate
 } from "react-router-dom";
 import Home from "./pages/Home";
 import Page from "./pages/Page";
@@ -37,6 +38,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/page/:slug" element={<Page />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </div>
