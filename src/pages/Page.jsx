@@ -147,6 +147,50 @@ function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
+// ── Encryption helpers (AES-GCM, key derived via PBKDF2) ────────────────────
+async function deriveKey(password, salt) {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(password),
+    "PBKDF2",
+    false,
+    ["deriveKey"]
+  );
+  return crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt: enc.encode(salt), iterations: 200_000, hash: "SHA-256" },
+    keyMaterial,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
+}
+
+async function encryptTabs(tabs, password, slug) {
+  const key = await deriveKey(password, slug);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encoded = new TextEncoder().encode(JSON.stringify(tabs));
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded);
+  return [
+    {
+      enc: true,
+      iv: btoa(String.fromCharCode(...iv)),
+      ct: btoa(String.fromCharCode(...new Uint8Array(ct))),
+    },
+  ];
+}
+
+async function decryptTabs(storedTabs, password, slug) {
+  if (!storedTabs || storedTabs.length === 0) return [];
+  // Legacy rows that haven't been encrypted yet — return as-is
+  if (!storedTabs[0]?.enc) return storedTabs;
+  const key = await deriveKey(password, slug);
+  const iv = Uint8Array.from(atob(storedTabs[0].iv), (c) => c.charCodeAt(0));
+  const ct = Uint8Array.from(atob(storedTabs[0].ct), (c) => c.charCodeAt(0));
+  const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ct);
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+
 // ── Tiptap Editor & Toolbar ──────────────────────────────────────────────────
 function DocToolbar({ editor }) {
   const [inputSize, setInputSize] = useState("20");
@@ -312,6 +356,7 @@ function Page() {
   const [fontSize, setFontSize] = useState(14);
   const [showTypePicker, setShowTypePicker] = useState(false); // New Tab Picker state
   const saveFlashTimer = useRef(null);
+  const passwordRef = useRef(""); // Kept in memory only — never stored
 
   useEffect(() => { checkPage(); }, []);
 
@@ -340,17 +385,7 @@ function Page() {
     } else if (!data) {
       setIsNew(true);
     } else {
-      setPage(data);
-      const loadedTabs =
-        data.tabs && data.tabs.length > 0
-          ? data.tabs.map((tab) => ({
-            language: "plaintext",
-            type: "code", // Default existing to code
-            ...tab
-          }))
-          : [];
-      setTabs(loadedTabs);
-      if (loadedTabs.length > 0) setActiveTabId(loadedTabs[0].id);
+      setPage(data); // raw encrypted tabs stay in page.tabs; decryption happens on unlock
     }
     setLoading(false);
   }
@@ -366,6 +401,7 @@ function Page() {
         .select()
         .single();
       if (error) { console.error(error); return; }
+      passwordRef.current = password;
       setPage(data);
       setTabs(defaultTabs);
       setUnlocked(true);
@@ -384,6 +420,22 @@ function Page() {
             ? `Wrong password. ${remaining} attempt${remaining !== 1 ? "s" : ""} remaining.`
             : "Too many failed attempts. Please refresh the page."
         );
+        return;
+      }
+      // Decrypt tabs with the verified password
+      try {
+        const decrypted = await decryptTabs(page.tabs, password, slug);
+        const loadedTabs = decrypted.map((tab) => ({
+          language: "plaintext",
+          type: "code",
+          ...tab,
+        }));
+        passwordRef.current = password;
+        setTabs(loadedTabs);
+        if (loadedTabs.length > 0) setActiveTabId(loadedTabs[0].id);
+      } catch (err) {
+        console.error("Decryption failed:", err);
+        setLockError("Failed to decrypt page content. The password may be incorrect.");
         return;
       }
       setUnlocked(true);
@@ -453,18 +505,24 @@ function Page() {
 
   const handleSave = useCallback(async () => {
     setSaving(true);
-    const { error } = await supabase
-      .from("pages")
-      .update({ tabs, updated_at: new Date() })
-      .eq("slug", slug);
-    if (error) {
-      console.error(error);
-      alert("Failed to save");
-    } else {
-      clearTimeout(saveFlashTimer.current);
-      setSaved(true);
-      setIsDirty(false);
-      saveFlashTimer.current = setTimeout(() => setSaved(false), 2000);
+    try {
+      const encryptedTabs = await encryptTabs(tabs, passwordRef.current, slug);
+      const { error } = await supabase
+        .from("pages")
+        .update({ tabs: encryptedTabs, updated_at: new Date() })
+        .eq("slug", slug);
+      if (error) {
+        console.error(error);
+        alert("Failed to save");
+      } else {
+        clearTimeout(saveFlashTimer.current);
+        setSaved(true);
+        setIsDirty(false);
+        saveFlashTimer.current = setTimeout(() => setSaved(false), 2000);
+      }
+    } catch (err) {
+      console.error("Encryption failed:", err);
+      alert("Failed to encrypt content before saving.");
     }
     setSaving(false);
   }, [tabs, slug]);
