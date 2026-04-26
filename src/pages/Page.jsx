@@ -214,7 +214,7 @@ function DocToolbar({ editor }) {
   if (!editor) return null;
 
   const handleSizeChange = (newSize) => {
-    const valid = Math.max(20, newSize);
+    const valid = Math.max(10, newSize);
     setInputSize(valid.toString());
     editor.chain().focus().setFontSize(`${valid}px`).run();
   };
