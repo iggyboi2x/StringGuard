@@ -334,6 +334,35 @@ function DocEditorArea({ content, onChange, fontSize }) {
   );
 }
 
+// ── Confirm Modal ────────────────────────────────────────────────────────────
+function ConfirmModal({ message, onConfirm, onCancel }) {
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === "Escape") onCancel();
+      if (e.key === "Enter") onConfirm();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onConfirm, onCancel]);
+
+  return (
+    <div className="sg-modal-overlay" onClick={onCancel}>
+      <div className="sg-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="sg-modal-icon">⚠</div>
+        <p className="sg-modal-message">{message}</p>
+        <div className="sg-modal-actions">
+          <button className="sg-modal-btn sg-modal-cancel" onClick={onCancel}>
+            Cancel
+          </button>
+          <button className="sg-modal-btn sg-modal-confirm" onClick={onConfirm} autoFocus>
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Page() {
   const { slug } = useParams();
 
@@ -357,6 +386,7 @@ function Page() {
   const [showTypePicker, setShowTypePicker] = useState(false); // New Tab Picker state
   const saveFlashTimer = useRef(null);
   const passwordRef = useRef(""); // Kept in memory only — never stored
+  const [confirmModal, setConfirmModal] = useState(null); // { message, onConfirm }
 
   useEffect(() => { checkPage(); }, []);
 
@@ -463,15 +493,20 @@ function Page() {
   }
 
   function removeTab(id) {
-    if (!window.confirm("Are you sure you want to close this tab?")) return;
-    const remaining = tabs.filter((t) => t.id !== id);
-    setTabs(remaining);
-    if (activeTabId === id && remaining.length > 0) {
-      setActiveTabId(remaining[remaining.length - 1].id);
-    } else if (remaining.length === 0) {
-      setActiveTabId(null);
-    }
-    setIsDirty(true);
+    setConfirmModal({
+      message: "Are you sure you want to close this tab?",
+      onConfirm: () => {
+        setConfirmModal(null);
+        const remaining = tabs.filter((t) => t.id !== id);
+        setTabs(remaining);
+        if (activeTabId === id && remaining.length > 0) {
+          setActiveTabId(remaining[remaining.length - 1].id);
+        } else if (remaining.length === 0) {
+          setActiveTabId(null);
+        }
+        setIsDirty(true);
+      },
+    });
   }
 
   function startRename(tab, e) {
@@ -557,6 +592,13 @@ function Page() {
 
   return (
     <>
+      {confirmModal && (
+        <ConfirmModal
+          message={confirmModal.message}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={() => setConfirmModal(null)}
+        />
+      )}
       {!unlocked ? (
         <div className="lock-wrap fade-up">
           <div className="lock-card">
